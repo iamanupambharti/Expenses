@@ -34,7 +34,69 @@
     <div id="root"></div>
 
     <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+
+        const ExpenseTracker = () => {
+            const [expenses, setExpenses] = useState(() => {
+                const saved = localStorage.getItem('my_excel_expenses');
+                return saved ? JSON.parse(saved) : [];
+            });
+            const [formData, setFormData] = useState({ name: '', amount: '', date: new Date().toISOString().split('T')[0], location: 'Home' });
+
+            useEffect(() => localStorage.setItem('my_excel_expenses', JSON.stringify(expenses)), [expenses]);
+            useEffect(() => lucide.createIcons());
+
+            const totalAmount = useMemo(() => expenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0), [expenses]);
+
+            const addExpense = (e) => {
+                e.preventDefault();
+                if (!formData.name || !formData.amount) return alert("Fill all fields");
+                setExpenses([...expenses, { id: Date.now(), ...formData, amount: parseFloat(formData.amount) }]);
+                setFormData({ ...formData, name: '', amount: '' });
+            };
+
+            const deleteExpense = (id) => setExpenses(expenses.filter(e => e.id !== id));
+
+            return (
+                <div className="min-h-screen p-4 md:p-8 max-w-5xl mx-auto">
+                    <div className="bg-white rounded-xl shadow-xl overflow-hidden">
+                        <div className="bg-green-600 p-6 text-white flex justify-between">
+                            <h1 className="text-2xl font-bold flex gap-2"><i data-lucide="sheet"></i> Expense Tracker</h1>
+                            <p className="text-2xl font-bold">${totalAmount.toFixed(2)}</p>
+                        </div>
+
+                        <div className="p-6 bg-gray-50 border-b">
+                            <form onSubmit={addExpense} className="flex flex-col md:flex-row gap-4">
+                                <input type="date" className="p-3 border rounded-lg" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} />
+                                <select className="p-3 border rounded-lg" value={formData.location} onChange={e => setFormData({...formData, location: e.target.value})}>
+                                    {['Home', 'Office', 'Travel', 'Food'].map(l => <option key={l} value={l}>{l}</option>)}
+                                </select>
+                                <input type="text" placeholder="Name" className="p-3 border rounded-lg flex-1" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
+                                <input type="number" placeholder="0.00" className="p-3 border rounded-lg w-32" value={formData.amount} onChange={e => setFormData({...formData, amount: e.target.value})} />
+                                <button className="bg-green-600 text-white px-8 rounded-lg font-bold">Add</button>
+                            </form>
+                        </div>
+
+                        <div className="p-6">
+                            <table className="excel-grid w-full">
+                                <thead><tr><th>Date</th><th>Location</th><th>Name</th><th className="text-right">Amount</th><th>Action</th></tr></thead>
+                                <tbody>
+                                    {expenses.map(e => (
+                                        <tr key={e.id}>
+                                            <td>{e.date}</td><td>{e.location}</td><td>{e.name}</td>
+                                            <td className="text-right">${e.amount.toFixed(2)}</td>
+                                            <td className="text-center"><button onClick={() => deleteExpense(e.id)}><i data-lucide="trash-2" className="text-red-500 w-4"></i></button></td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
         const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<ExpenseTracker />);
     </script>
 </body>
 </html>
