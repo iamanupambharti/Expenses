@@ -12,7 +12,7 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
@@ -204,11 +204,69 @@
                 showNotify("🗑️ Deleted");
             };
 
-            const downloadExcel = () => {
-                const ws = XLSX.utils.json_to_sheet(expenses.map(e => ({ Date: e.date, Location: e.location, Name: e.name, Amount: e.amount })));
+     const downloadExcel = () => {
+                if (!expenses.length) return showNotify("⚠️ No data to export!");
+                let data = expenses.map(e => ({
+                    Date: e.date,
+                    Location: e.location,
+                    Name: e.name,
+                    Amount: parseFloat(e.amount)
+                }));
+
+                data.sort((a, b) => new Date(a.Date) - new Date(b.Date));
+
+                const total = data.reduce((sum, item) => sum + item.Amount, 0);
+                
+                data.push({ Date: "", Location: "", Name: "", Amount: "" });
+                
+                data.push({
+                    Date: "", 
+                    Location: "", 
+                    Name: "TOTAL EXPENSE", 
+                    Amount: total
+                });
+                const ws = XLSX.utils.json_to_sheet(data);
+
+                
+                const range = XLSX.utils.decode_range(ws['!ref']);
+
+                for (let R = range.s.r; R <= range.e.r; ++R) {
+                    for (let C = range.s.c; C <= range.e.c; ++C) {
+                        const address = XLSX.utils.encode_cell({ r: R, c: C });
+                        if (!ws[address]) continue; 
+
+                        if (!ws[address].s) ws[address].s = {};
+
+                        ws[address].s.alignment = { horizontal: "center", vertical: "center" };
+
+                        if (R === 0) {
+                            ws[address].s.font = { bold: true, color: { rgb: "FFFFFF" } };
+                            ws[address].s.fill = { fgColor: { rgb: "16A34A" } };
+                        }
+
+                        if (C === 0 || C === 1 || C === 3) {
+                            if (!ws[address].s.font) ws[address].s.font = {};
+                            ws[address].s.font.bold = true; 
+                        }
+                        
+                        if (R === range.e.r) {
+                            ws[address].s.font = { bold: true, sz: 14, color: { rgb: "166534" } }; 
+                            ws[address].s.fill = { fgColor: { rgb: "DCFCE7" } }; 
+                        }
+}
+                }
+
+                ws['!cols'] = [
+                    { wch: 15 }, 
+                    { wch: 20 }, 
+                    { wch: 40 }, 
+                    { wch: 15 }  
+                ];
+
                 const wb = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(wb, ws, "Expenses");
                 XLSX.writeFile(wb, "Expense_Sheet.xlsx");
+                showNotify("📥Excel sheet Downloaded!");
             };
 
             const handleVoiceInput = () => {
