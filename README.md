@@ -4,8 +4,7 @@ A modern, feature-rich expense tracker web application that helps you manage you
 
 ## Features
 
-- **Manual and Smart Expense Entry:** Add expenses manually with detailed information or use the "Smart Add" feature to automatically parse and categorize expenses from natural language input (e.g., "Lunch at McDonald's for 12 dollars").
-- **Voice Input:** Dictate your expenses using the voice input feature for a hands-free experience.
+- **Manual Entry:** Add expenses manually with detailed information.
 - **Expense Management:**
   - View all your expenses in a clean, organized table.
   - Sort expenses by date.
@@ -52,3 +51,5 @@ A modern, feature-rich expense tracker web application that helps you manage you
 ![Manual Entry](/Manual.png)
 ![Settings](/Settings.png)
 ![AI-Insights](/AI-Insights.png)
+
+**Note:** Currently working on Smart Add and voice transcription.Failed to implement. Come soon...
