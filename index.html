@@ -148,37 +148,76 @@
             };
 
             const callGemini = async (prompt) => {
-                if (!userApiKey) { setShowSettings(true); showNotify("⚠️ Set API Key in Settings first!"); return null; }
-                if (!navigator.onLine) { showNotify("⚠️ No Internet Connection"); return null; }
+                if (!userApiKey) { 
+                    setShowSettings(true); 
+                    showNotify("⚠️ Set API Key in Settings first!"); 
+                    return { error: "API key not set" };
+                }
+                if (!navigator.onLine) { 
+                    showNotify("⚠️ No Internet Connection"); 
+                    return { error: "No internet connection" };
+                }
                 try {
-                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${userApiKey}`, {
-                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${userApiKey}`, {
+                        method: 'POST', 
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
                     });
-                    if (!response.ok) throw new Error("API Request Failed");
+                    
                     const data = await response.json();
-                    return data.candidates?.[0]?.content?.parts?.[0]?.text || "Error";
-                } catch (e) { showNotify("AI Service Unavailable. Check Key."); return "Error"; }
+
+                    if (!response.ok) {
+                        const errorMsg = data?.error?.message || "API Request Failed";
+                        showNotify(`❌ AI Error: ${errorMsg}`);
+                        return { error: errorMsg };
+                    }
+                    
+                    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                    if (!text) {
+                        showNotify("❌ AI returned empty response.");
+                        return { error: "Empty response from AI" };
+                    }
+                    return { text };
+
+                } catch (e) { 
+                    showNotify("AI Service Unavailable. Check Key/Network."); 
+                    return { error: e.message };
+                }
             };
 
             const handleSmartAdd = async () => {
                 if (!smartInput.trim()) return;
                 saveToHistory();
                 setIsAiLoading(true);
-                const prompt = `Extract structured expense data from: "${smartInput}". Date: ${new Date().toISOString().split('T')[0]}. Locations: ${locations.join(', ')}. Currency: ${currencySymbol}. Return raw JSON: name, amount, date, location.`;
+                const prompt = `Extract structured expense data from: "${smartInput}". Today's Date: ${new Date().toISOString().split('T')[0]}. Available Locations: ${locations.join(', ')}. Currency: ${currencySymbol}. Return ONLY a raw JSON object with keys (name, amount, date, location). If a value is not found, it should be null. Example: {"name": "Coffee", "amount": 3.50, "date": "2025-12-13", "location": "Home"}`;
+                
                 const result = await callGemini(prompt);
-                if (result && result !== "Error") {
+                
+                if (result && !result.error) {
                     try {
-                        const jsonStart = result.indexOf('{'); const jsonEnd = result.lastIndexOf('}');
-                        if (jsonStart !== -1) {
-                            const data = JSON.parse(result.substring(jsonStart, jsonEnd + 1));
-                            if (data.amount) {
-                                if (data.location && !locations.includes(data.location)) setLocations(prev => [...prev, data.location]);
-                                setExpenses(prev => [...prev, { id: Date.now(), name: data.name || "Unknown", amount: parseFloat(data.amount), date: data.date, location: data.location || "Home" }]);
-                                setSmartInput(""); showNotify("✨ AI Added!");
-                            } else showNotify("Could not understand amount.");
+                        const jsonString = result.text.substring(result.text.indexOf('{'), result.text.lastIndexOf('}') + 1);
+                        const data = JSON.parse(jsonString);
+                        
+                        if (data.amount) {
+                            if (data.location && !locations.includes(data.location)) {
+                                setLocations(prev => [...prev, data.location]);
+                            }
+                            setExpenses(prev => [...prev, { 
+                                id: Date.now(), 
+                                name: data.name || "Unknown", 
+                                amount: parseFloat(data.amount), 
+                                date: data.date || new Date().toISOString().split('T')[0], 
+                                location: data.location || "Home" 
+                            }]);
+                            setSmartInput(""); 
+                            showNotify("✨ AI Added!");
+                        } else {
+                            showNotify("Could not understand amount from AI response.");
                         }
-                    } catch (e) { showNotify("Failed to parse AI response."); }
+                    } catch (e) { 
+                        showNotify("Failed to parse AI response. Try rephrasing."); 
+                        console.error("AI Parse Error:", e, "Response was:", result.text);
+                    }
                 }
                 setIsAiLoading(false);
             };
@@ -354,17 +393,17 @@
                         <div className="p-6 bg-gray-50 border-b border-gray-200">
                             <div className="flex gap-6 mb-6 border-b border-gray-200">
                                 <button onClick={() => setShowSmartAdd(false)} className={`text-sm font-bold pb-3 px-1 border-b-2 ${!showSmartAdd ? 'text-green-600 border-green-600' : 'text-gray-400 border-transparent'}`}>Manual Entry</button>
-                                <button onClick={() => setShowSmartAdd(true)} className={`text-sm font-bold pb-3 px-1 border-b-2 flex items-center gap-2 ${showSmartAdd ? 'text-purple-600 border-purple-600' : 'text-gray-400 border-transparent'}`}><i data-lucide="wand-2" className="w-4 h-4"></i> Smart Add</button>
+                                {/*<button onClick={() => setShowSmartAdd(true)} className={`text-sm font-bold pb-3 px-1 border-b-2 flex items-center gap-2 ${showSmartAdd ? 'text-purple-600 border-purple-600' : 'text-gray-400 border-transparent'}`}><i data-lucide="wand-2" className="w-4 h-4"></i> Smart Add</button>*/}
                             </div>
 
                             {showSmartAdd ? (
                                 <div className="animate-fade-in relative">
-                                    <textarea value={smartInput} onChange={(e) => setSmartInput(e.target.value)} placeholder="Type or speak: 'Lunch at McDonald's for 12 dollars'..." className="w-full p-4 border border-purple-200 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none min-h-[120px] text-gray-700 pr-14 text-lg" disabled={isAiLoading} />
+                                   {/* <textarea value={smartInput} onChange={(e) => setSmartInput(e.target.value)} placeholder="Currently voice transcription and smart add is not working properly!!!!" className="w-full p-4 border border-purple-200 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none min-h-[120px] text-gray-700 pr-14 text-lg" disabled={isAiLoading} />
                                     <button onClick={handleVoiceInput} disabled={isAiLoading} className={`absolute top-3 right-3 p-2 rounded-full transition-all ${isListening ? 'bg-red-500 text-white listening-pulse' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}><i data-lucide={isListening ? "mic-off" : "mic"} className="w-5 h-5"></i></button>
-                                    <div className="mt-3 flex justify-between items-center">
+                                <div className="mt-3 flex justify-between items-center">
                                         <p className="text-xs text-gray-500 italic">{isListening ? "Recording..." : "AI auto-detects: Date, Amount, Name, Location"}</p>
                                         <button onClick={handleSmartAdd} disabled={isAiLoading || !smartInput.trim()} className="sparkle-btn text-white px-6 py-2 rounded-lg font-bold shadow-md hover:shadow-lg transition-all flex items-center gap-2 disabled:opacity-50">{isAiLoading ? "Processing..." : <><i data-lucide="wand-2" className="w-4 h-4"></i> Extract & Add</>}</button>
-                                    </div>
+                                    </div>*/}
                                 </div>
                             ) : (
                                 <form onSubmit={addExpense} className="flex flex-col md:flex-row gap-4 items-end animate-fade-in">
