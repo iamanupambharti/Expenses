@@ -38,7 +38,7 @@ A modern, feature-rich expense tracker web application that helps you manage you
 
 ## How to Use
 
-1. Open the [ExpenseTracker.](www.expenseTracker.vercel.app) in your web browser.
+1. Open the [ExpenseTracker.](www.expensestrackers.vercel.app) in your web browser.
 2. **Generate Google Gemini API Key:**
    - Go to the [Google AI Studio](https://aistudio.google.com/app/apikey) website.
    - Click on "Get API key in a new project" or "Create API key" if you have an existing project.
