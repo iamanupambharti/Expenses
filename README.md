@@ -50,6 +50,5 @@ A modern, feature-rich expense tracker web application that helps you manage you
 
 ![Widget View](/widget.png)
 ![Manual Entry](/Manual.png)
-![Smart Entry](/Smart.png)
 ![Settings](/Settings.png)
 ![AI-Insights](/AI-Insights.png)
